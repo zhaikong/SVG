@@ -199,7 +199,26 @@
         });
 
         function downloadSVG(svgCode, fileName) {
-            const blob = new Blob([svgCode], {type: 'image/svg+xml'});
+            // 提取SVG的宽度和高度
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svgCode, 'image/svg+xml');
+            const svgElement = svgDoc.documentElement;
+            
+            // 如果SVG没有指定宽度和高度，设置一个默认值
+            if (!svgElement.hasAttribute('width')) svgElement.setAttribute('width', '800');
+            if (!svgElement.hasAttribute('height')) svgElement.setAttribute('height', '600');
+            
+            // 增加SVG的viewBox属性以确保高质量渲染
+            if (!svgElement.hasAttribute('viewBox')) {
+                const width = parseFloat(svgElement.getAttribute('width'));
+                const height = parseFloat(svgElement.getAttribute('height'));
+                svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            }
+            
+            // 将修改后的SVG转换回字符串
+            const modifiedSvgCode = new XMLSerializer().serializeToString(svgElement);
+            
+            const blob = new Blob([modifiedSvgCode], {type: 'image/svg+xml'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -217,7 +236,7 @@
             img.onload = function() {
                 const canvas = document.createElement("canvas");
                 // 增加分辨率
-                const scale = 2;  // 可以根据需要调整这个值
+                const scale = 4;  // 将缩放因子从2增加到4
                 canvas.width = this.width * scale;
                 canvas.height = this.height * scale;
                 const ctx = canvas.getContext("2d");
@@ -242,7 +261,7 @@
                     a.download = 'download.png';
                     a.click();
                     URL.revokeObjectURL(url);
-                }, 'image/png');
+                }, 'image/png', 1.0);  // 使用最高质量设置
             };
 
             img.onerror = function(error) {
