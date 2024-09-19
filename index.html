@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>SVG 工具箱</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .section-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #444;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .section-title:hover {
+            color: #4CAF50;
+        }
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .section.active .section-content {
+            max-height: 2000px; /* 增加最大高度以确保内容完全显示 */
+        }
+        #svgInput, #svgContainer {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #svgInput {
+            height: 150px;
+            resize: vertical;
+        }
+        #svgContainer {
+            border: 1px solid #ccc;
+            min-height: 200px;
+            max-height: none; /* 移除最大高度限制 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            background-color: transparent; /* 确保背景透明 */
+        }
+        #svgContainer svg {
+            max-width: 100%;
+            max-height: 100%;
+            background-color: transparent; /* 确保SVG背景透明 */
+        }
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .input-group input[type="text"] {
+            flex-grow: 1;
+            margin-right: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button, input[type="file"] {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button:hover, input[type="file"]:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        button:active, input[type="file"]:active {
+            transform: scale(0.95);
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SVG 工具箱</h1>
+        
+        <div class="section active">
+            <div class="section-title">1. SVG 输入</div>
+            <div class="section-content">
+                <textarea id="svgInput" placeholder="在此输入SVG代码..."></textarea>
+                <button id="previewBtn">预览 SVG</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">2. SVG 预览</div>
+            <div class="section-content">
+                <div id="svgContainer"></div>
+                <div class="input-group">
+                    <input type="text" id="svgFileName" placeholder="输入SVG文件名（可选）">
+                    <button id="downloadSvgBtn">下载 SVG</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">3. 转换操作</div>
+            <div class="section-content">
+                <input type="file" id="fileInput" accept=".svg">
+                <button id="downloadPngBtn" disabled>下载 PNG</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const svgInput = document.getElementById('svgInput');
+        const svgContainer = document.getElementById('svgContainer');
+        const previewBtn = document.getElementById('previewBtn');
+        const svgFileName = document.getElementById('svgFileName');
+        const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+        const fileInput = document.getElementById('fileInput');
+        const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+        // 添加部分折叠/展开功能
+        document.querySelectorAll('.section-title').forEach(title => {
+            title.addEventListener('click', () => {
+                title.parentElement.classList.toggle('active');
+            });
+        });
+
+        previewBtn.addEventListener('click', function() {
+            const svgCode = svgInput.value.trim();
+            if (svgCode) {
+                // 安全性：过滤SVG代码中的潜在危险内容
+                const sanitizedSvgCode = sanitizeSvg(svgCode);
+                svgContainer.innerHTML = sanitizedSvgCode;
+                downloadPngBtn.disabled = false;
+                document.querySelectorAll('.section')[1].classList.add('active');
+            } else {
+                alert('请先输入SVG代码。');
+            }
+        });
+
+        downloadSvgBtn.addEventListener('click', function() {
+            const svgCode = svgInput.value.trim();
+            if (svgCode) {
+                const fileName = svgFileName.value.trim() || 'download';
+                downloadSVG(svgCode, fileName + '.svg');
+            } else {
+                alert('请先输入SVG代码。');
+            }
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const svgCode = e.target.result;
+                    // 安全性：过滤SVG代码中的潜在危险内容
+                    const sanitizedSvgCode = sanitizeSvg(svgCode);
+                    svgInput.value = sanitizedSvgCode;
+                    svgContainer.innerHTML = sanitizedSvgCode;
+                    downloadPngBtn.disabled = false;
+                    document.querySelectorAll('.section')[1].classList.add('active');
+                };
+                reader.readAsText(file);
+            } else {
+                alert('请选择一个有效的SVG文件。');
+            }
+        });
+
+        downloadPngBtn.addEventListener('click', function() {
+            const svg = svgContainer.querySelector('svg');
+            if (svg) {
+                saveSVGasPNG(svg);
+            } else {
+                alert('请先预览SVG或上传SVG文件。');
+            }
+        });
+
+        function downloadSVG(svgCode, fileName) {
+            const blob = new Blob([svgCode], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function saveSVGasPNG(svgElement) {
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement("canvas");
+                // 增加分辨率
+                const scale = 2;  // 可以根据需要调整这个值
+                canvas.width = this.width * scale;
+                canvas.height = this.height * scale;
+                const ctx = canvas.getContext("2d");
+                
+                // 设置背景颜色
+                ctx.fillStyle = getComputedStyle(svgElement).backgroundColor || 'transparent';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 提高渲染质量
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                // 绘制SVG
+                ctx.scale(scale, scale);
+                ctx.drawImage(this, 0, 0);
+                URL.revokeObjectURL(svgUrl);
+
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'download.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            };
+
+            img.onerror = function(error) {
+                console.error('Error loading SVG:', error);
+                alert('SVG加载失败，请检查SVG文件是否正确。');
+                URL.revokeObjectURL(svgUrl);
+            };
+
+            img.src = svgUrl;
+        }
+
+        // 安全性：过滤SVG代码中的潜在危险内容
+        function sanitizeSvg(svg) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svg, 'image/svg+xml');
+            
+            // 移除所有脚本元素
+            const scripts = doc.getElementsByTagName('script');
+            for (let i = scripts.length - 1; i >= 0; i--) {
+                scripts[i].parentNode.removeChild(scripts[i]);
+            }
+            
+            // 移除所有on*事件属性
+            const allElements = doc.getElementsByTagName('*');
+            for (let i = 0; i < allElements.length; i++) {
+                const attrs = allElements[i].attributes;
+                for (let j = attrs.length - 1; j >= 0; j--) {
+                    if (attrs[j].name.startsWith('on')) {
+                        allElements[i].removeAttribute(attrs[j].name);
+                    }
+                }
+            }
+            
+            return new XMLSerializer().serializeToString(doc.documentElement);
+        }
+    </script>
+</body>
+</html>
